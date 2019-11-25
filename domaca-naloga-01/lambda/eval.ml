@@ -3,7 +3,7 @@ module S = Syntax
 
 let rec eval_exp = function
   | S.Var x -> failwith "Expected a closed term"
-  | S.Int _ | S.Bool _ | S.Lambda _ | S.RecLambda _ | Nil as e -> e
+  | S.Int _ | S.Bool _ | S.Lambda _ | S.RecLambda _ as e -> e
   | S.Plus (e1, e2) ->
     let n1 = eval_int e1
     and n2 = eval_int e2
@@ -43,21 +43,35 @@ let rec eval_exp = function
     | S.RecLambda (f, x, e) as rec_f -> eval_exp (S.subst [(f, rec_f); (x, v)] e)
     | _ -> failwith "Function expected"
     end 
-
   | S.Pair (e1, e2) ->
     let v1 = eval_exp e1
     and v2 = eval_exp e2
     in S.Pair (v1, v2)
-  | S.Fst (Pair(e1, e2)) -> eval_exp e1
-  | S.Snd (Pair (e1, e2)) -> eval_exp e2
+  | S.Fst e -> 
+    let v = eval_exp e
+    in 
+    begin match v with
+    | S.Pair (v1, v2) -> v1
+    | _ -> failwith "Pair expected"
+    end
+  | S.Snd e -> 
+    let v = eval_exp e
+    in 
+    begin match v with
+    | S.Pair (v1, v2) -> v2
+    | _ -> failwith "Pair expected"
+    end
+  | S.Nil -> S.Nil
   | S.Cons (e1, e2) ->
     let v1 = eval_exp e1
     and v2 = eval_exp e2
     in S.Cons (v1, v2)
   | S.Match (e, e1, x, xs, e2) ->
-    begin match e with
+    let v = eval_exp e
+    in
+    begin match v with
     | S.Nil -> eval_exp e1
-    | S.Cons (x', xs') -> eval_exp (S.subst [(x, x'); (xs, xs')] e2 )
+    | S.Cons (v1, v2) -> eval_exp (S.subst [(xs, v2); (x, v1)] e2 )
     | _ -> failwith "List expected"
     end
 and eval_int e =
@@ -66,20 +80,20 @@ and eval_int e =
   | _ -> failwith "Integer expected"
 
 let rec is_value = function
-  | S.Int _ -> true
-  | S.Bool _ -> true
-  | S.Lambda _ -> true
-  | S.RecLambda _ -> true
-  | S.Nil -> true
-  | S.Cons (v1, v2) when (is_value v1 && is_value v2) -> true
-  | S.Pair (v1, v2) when (is_value v1 && is_value v2) -> true
-  | _ -> false
+  | S.Int _ | S.Bool _ | S.Lambda _ | S.RecLambda _ -> true
+  | S.Var _ | S.Plus _ | S.Minus _ | S.Times _ | S.Equal _ | S.Less _ | S.Greater _
+  | S.IfThenElse _ | S.Apply _ -> false
+  | S.Pair (e1, e2) -> is_value e1 && is_value e2
+  | S.Fst _ | S.Snd _ | S.Match _ -> false
+  | S.Nil -> true 
+  | S.Cons (e1, e2) -> is_value e1 && is_value e2
 
   
 let rec step = function
   | S.Var _ | S.Int _ | S.Bool _ | S.Lambda _ | S.RecLambda _ -> failwith "Expected a non-terminal expression"
-  | S.Pair (v1, v2) when (is_value v1 && is_value v2) -> failwith "Expected a non-terminal expression"
   | S.Nil -> failwith "Expected a non-terminal expression"
+  | S.Pair (v1, v2) when (is_value v1 && is_value v2) -> failwith "Expected a non-terminal expression"
+  | S.Cons (v1, v2) when (is_value v1 && is_value v2) -> failwith "Expected a non-terminal expression"
   | S.Plus (S.Int n1, S.Int n2) -> S.Int (n1 + n2)
   | S.Plus (S.Int n1, e2) -> S.Plus (S.Int n1, step e2)
   | S.Plus (e1, e2) -> S.Plus (step e1, e2)
@@ -106,14 +120,18 @@ let rec step = function
   | S.Apply (e1, e2) -> S.Apply (step e1, e2)
   | S.Pair (v1, e2) when is_value v1 -> S.Pair(v1, step e2)
   | S.Pair (e1, e2) -> S.Pair (step e1, e2)
-  | S.Fst (S.Pair(v1, _)) when is_value v1 -> v1
+  | S.Fst (S.Pair (v1, v2)) when (is_value v1 && is_value v2) -> v1
   | S.Fst (e) -> S.Fst (step e)
-  | S.Snd (S.Pair(_, v2)) when is_value v2 -> v2
+  | S.Snd (S.Pair (v1, v2)) when (is_value v1 && is_value v2) -> v2
   | S.Snd (e) -> S.Snd (step e)
   | S.Cons (v1, e2) when is_value v1 -> S.Cons (v1, step e2)
   | S.Cons (e1, e2) -> S.Cons (step e1, e2)
-  | S.Match (S.Cons (v1, v2), _, x, xs, e2) when (is_value v1 && is_value v2) -> S.subst [(x, v1); (xs, v2)] e2
-  | S.Match (S.Nil, e1, x, xs, e2) -> e1
+  | S.Match (v, e1, x, xs, e2) when is_value v ->
+      begin match v with
+      | S.Nil -> e1
+      | S.Cons (v1, v2) -> S.subst [(xs, v2); (x, v1)] e2
+      | _ -> failwith "List expected"
+      end
   | S.Match (e, e1, x, xs, e2) -> S.Match(step e, e1, x, xs, e2)
   
   
