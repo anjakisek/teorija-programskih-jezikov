@@ -1,1 +1,1 @@
-MATCH [] WITH | [] -> TRUE | ("x"::"xs") -> FALSE
+( 5 + 6) :: ( TRUE) :: (5 > 3) :: ({(4*3 - 2), (IF TRUE THEN 2 ELSE 3)}) :: []
