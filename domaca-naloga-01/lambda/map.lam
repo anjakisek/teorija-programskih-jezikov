@@ -1,1 +1,6 @@
-MATCH [] WITH | [] -> TRUE | (x::xs) -> FALSE
+LET REC map f = FUN l ->
+    MATCH l WITH 
+    | [] -> []
+    | x :: xs -> (f x) :: (map f xs)
+IN
+map (FUN x -> (IF (x = 3) THEN (x + 10) ELSE (x + 1))) (4 :: 3 :: 2 :: 1 :: [])
