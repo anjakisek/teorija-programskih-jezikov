@@ -1,0 +1,1 @@
+(FUN x -> FUN y -> x y) (FUN t -> t*y) 5
