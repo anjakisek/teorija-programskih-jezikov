@@ -1,4 +1,10 @@
-let explode str = List.init (String.length str) (String.get str)
+let init_list n f =
+  let rec init_list' acc i n f =
+    if i >= n then acc
+    else init_list' ((f i) :: acc) (i+1) n f
+  in List.rev (init_list' [] 0 n f)
+
+let explode str = init_list (String.length str) (String.get str)
 
 let implode chrs = String.init (List.length chrs) (List.nth chrs)
 
