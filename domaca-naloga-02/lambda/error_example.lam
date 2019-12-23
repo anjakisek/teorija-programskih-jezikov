@@ -1,0 +1,4 @@
+LET f = FUN a -> FST a = SND a
+IN MATCH [] WITH
+    | [] -> f
+    | x :: xs -> TRUE :: FALSE :: []
