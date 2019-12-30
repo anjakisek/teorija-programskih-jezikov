@@ -386,7 +386,29 @@ begin
         apply Hof_a,
         apply Hstep_ih Hof_a_1,
     },
-    repeat{sorry}
+    case step.list_match_step {
+        cases Hof,
+        apply of.list_match,
+        apply Hstep_ih Hof_a,
+        apply Hof_a_1,
+        apply Hof_a_2,
+
+    },
+    case step.list_match_nil {
+        cases Hof,
+        cases Hof_a,
+        apply Hof_a_1,
+    },
+    case step.list_match_cons {
+        cases Hof,
+        cases Hof_a,
+        apply substitution,
+        repeat {assumption},
+        apply substitution,
+        repeat {assumption},
+        apply weakening,
+        assumption,
+    },
 end
 
 
@@ -477,5 +499,34 @@ begin
             exact (step.if_then_else h_h),
         }
   },
+  case of.pair {
+      cases H_ih_a empty,
+      case or.inl {
+          cases H_ih_a_1 empty,
+          case or.inl {
+              left,
+              apply value.pair,
+              apply h,
+              apply h_1,
+          },
+          case or.inr {
+              right,
+              cases h_1,
+              existsi (tm.pair H_e1 h_1_w),
+              apply step.pair2,
+              assumption,
+              assumption,
+          },
+          },
+    case or.inr {
+        right,
+        cases h,
+        existsi (tm.pair h_w H_e2),
+        apply step.pair1,
+        assumption,
+    },
+
+      },
+
   repeat {sorry},
 end
